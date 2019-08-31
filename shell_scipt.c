@@ -78,6 +78,7 @@ void Command_handler(char** user_input,int no_of_words)
 	int i=0, choice = 0; 
 	char* list_of_cmd[10]; 	
 
+	//list of cmd include command take this shell can handle
 	list_of_cmd[0] = "exit"; 
 	list_of_cmd[1] = "cd"; 
 	list_of_cmd[2] = "pwd"; 
@@ -89,6 +90,7 @@ void Command_handler(char** user_input,int no_of_words)
 	list_of_cmd[8] = "rm";
 	list_of_cmd[9] = "mkdir";
 
+	//comparing processed input string with shell commands
 	while (i<10) 
 	{ 
 		if (strcmp(user_input[0], list_of_cmd[i]) == 0) 
@@ -99,7 +101,7 @@ void Command_handler(char** user_input,int no_of_words)
 		i++;
 	} 
  
-
+	//now calling function corresponding to their function
 	if(choice==1)
 	{
 		ending_message(); 
@@ -168,18 +170,7 @@ int count_word(char* str, char** user_input)
 //this will work for for echo command
 void in_echo(char** text,int word_count)
 {
-	pid_t process_id = fork();  
-  
-    if (process_id == -1) 
-	{ 
-        printf("\nError occured in forking child"); 
-        return; 
-    } 
-	
-	else if (process_id == 0) 
-	{   
-		
-		if (word_count>1)
+	if (word_count>1)
 		{
 			int option=0;
 			for(int i=0;i<word_count;i++)
@@ -210,119 +201,106 @@ void in_echo(char** text,int word_count)
 		}
 
 		else printf("\n");
-
-		exit(0);
-    } 
-	
-	else 
-	{ 
-        wait(NULL);  
-        return; 
-    }
 }
 
 //this function is for present directory 
 void in_pwd(char** argruments,int word_count)
-{
-	pid_t process_id = fork();  
-  
-    if (process_id == -1) 
-	{ 
-        printf("\nError occured in forking child"); 
-        return; 
-    } 
-	
-	else if (process_id == 0) 
-	{       
+{	      
 		char pwd[200];
 
 		if (word_count>2)printf("Error: pwd accepts only one argrument");
 
 		else if (word_count>1)
-			{
+		{
+			pid_t process_id = fork();  
+  
+    		if (process_id == -1) 
+			{ 
+        		printf("\nError: Some unexpected error occured during execution of the command\n"); 
+        		return; 
+    		} 
+
+			else if (process_id == 0) 
+			{       
 				if (strcmp(argruments[1],"-L")==0)printf("\nCurrent working logical directory (with symbolic link) -->>> %s \n",getcwd(pwd, sizeof(pwd)));
 				else if (strcmp(argruments[1],"-P")==0)
 				{
-					if (execvp(argruments[0],argruments)>0)
-					{ 
-						printf(" <<<<<<----Current working physical directory (without symbolic link) \n");
-					}
-					else
-					{
-						printf("\nError: Some unexpected error occured during execution of the command");
-					}				
-				}
-				else printf("\nError : incorrect option is enterterd\n");
-			}
+					if (execvp(argruments[0],argruments)<0)printf("\nError: Some unexpected error occured during execution of the command");
 
-		else if(word_count==1)printf("\nYou are working in the -->>> %s directory \n",getcwd(pwd, sizeof(pwd)));
+					else printf(" <<<<<<----Current working physical directory (without symbolic link) \n");
+				}
+				else printf("\nError : incorrect option is enterterd\n");	
+				exit(0);
+    		} 
+
+			else 
+			{ 
+        		wait(NULL);  
+        		return; 
+    		}				
+		}
+
+		else if(word_count==1)printf("\nYou are working in the -->>> %s \n",getcwd(pwd, sizeof(pwd)));
 
 		else printf("\nError: pwd accepts only one argrument\n");	
-		
-		exit(0);
-    } 
-	
-	else 
-	{ 
-        wait(NULL);  
-        return; 
-    } 
 }
 
 //this function is for cd command
 void in_cd(char** argruments,int word_count)
 {
-	pid_t process_id = fork();  
-  
-    if (process_id == -1) 
-	{ 
-        printf("\nError occured in forking child"); 
-        return; 
-    } 
-	
-	else if (process_id == 0) 
-	{       
-		if (word_count>2)
+	if (word_count>2)
+	{
+		if (strcmp(argruments[1],"-L")==0)
 		{
-			if (strcmp(argruments[1],"-L")==0)
+			if(chdir(argruments[2])!=0)
 			{
-				if(chdir(argruments[2])!=0)
-				{
-					printf("\nError: %s path or directory doesn't exist",argruments[2]);
-				}
-				else 
-				{
-					chdir(argruments[1]);
-					show_directory();
-				}
+				printf("\nError: %s path or directory doesn't exist\n",argruments[2]);
 			}
-			else if(strcmp(argruments[1],"-P")==0)
+			else 
 			{
-				if (execvp(argruments[0],argruments)>0)
+				chdir(argruments[1]);
+				show_directory();
+			}
+		}
+	
+		else if(strcmp(argruments[1],"-P")==0)
+		{
+			pid_t process_id = fork();  
+  
+    		if (process_id == -1) 
+			{ 
+        		printf("\nError: Some unexpected error occured during execution of the command\n"); 
+        		return; 
+    		} 
+
+			else if (process_id == 0) 
+			{       
+				if (execvp(argruments[0],argruments)>=0)
 				{
 					printf(" <<<<<<----Current working physical directory (without symbolic link) \n");
 					show_directory();
 				}
-				else printf("\nError: Some unexpected error occured during execution of the command\n");
-			}
-			else printf("\nError: Either option is invalid or not supported by the shell\n");
-		}
+				else printf("\nError: Some unexpected error occured during execution of the command\n");	
+				exit(0);
+    		} 
 
-		else if(word_count>1)
-		{
-			if(chdir(argruments[1])!=0)printf("\nError: %s path or directory doesn't exist",argruments[1]);
-			else show_directory();
+			else 
+			{ 
+        		wait(NULL);  
+        		return; 
+    		} 
 		}
-		else printf("\nError: Enter path or directory\n");	
-		
-		exit(0);
-    } 
 	
-	else 
-	{ 
-        wait(NULL);  
-        return; 
-    } 
+		else printf("\nError: Either option is invalid or not supported by the shell\n");
+	}
+
+	else if(word_count>1)
+	{
+		if(chdir(argruments[1])!=0)printf("\nError: %s path or directory doesn't exist\n",argruments[1]);
+		else show_directory();
+	}
+
+	else printf("\nError: Enter path or directory\n");	 
 
 }
 
@@ -333,7 +311,7 @@ void ext_cat(char** address,int word_count)
   
     if (process_id == -1) 
 	{ 
-        printf("\nError occured in forking child"); 
+        printf("\nError: Some unexpected error occured during execution of the command\n"); 
         return; 
     } 
 	
@@ -375,7 +353,7 @@ void ext_date(char** argruments,int word_count)
   
     if (process_id == -1) 
 	{ 
-        printf("\nError occured in forking child"); 
+        printf("\nError: Some unexpected error occured during execution of the command\n"); 
         return; 
     } 
 	
@@ -418,7 +396,7 @@ void ext_ls(char** argruments,int word_count)
   
     if (process_id == -1) 
 	{ 
-        printf("\nError occured in forking child"); 
+        printf("\nError: Some unexpected error occured during execution of the command\n"); 
         return; 
     } 
 	
@@ -460,7 +438,7 @@ void ext_rm(char** argruments,int word_count)
   
     if (process_id == -1) 
 	{ 
-        printf("\nError occured in forking child"); 
+        printf("\nError: Some unexpected error occured during execution of the command\n"); 
         return; 
     } 
 	
@@ -502,7 +480,7 @@ void ext_mkdir(char** argruments,int word_count)
   
     if (process_id == -1) 
 	{ 
-        printf("\nError occured in forking child"); 
+        printf("\nError: Some unexpected error occured during execution of the command\n"); 
         return; 
     } 
 	
@@ -559,7 +537,7 @@ void show_history(char** argruments,int word_count)
   
     if (process_id == -1) 
 	{ 
-        printf("\nError occured in forking child"); 
+        printf("\nError: Some unexpected error occured during execution of the command\n"); 
         return; 
     } 
 	
@@ -604,14 +582,11 @@ void show_history(char** argruments,int word_count)
 
 					else 
 					{
-						/*for(int i=atoi(argruments[2])-1;i<=last_pointer-1;i++)
+						for(int i=atoi(argruments[2])-1;i<=last_pointer-1;i++)
 						{
 							printf("\n hi again\n");
 							history[i]=history[i+1];
-						}*/
-						printf("\n hi again %s",argruments[2]);
-						char* tempe="";
-						history[atoi(argruments[2])]=tempe;
+						}
 					}
 
 				}
