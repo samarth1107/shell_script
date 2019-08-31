@@ -175,7 +175,7 @@ void in_echo(char** text,int word_count)
 			int option=0;
 			for(int i=0;i<word_count;i++)
 			{
-				if (strcmp(text[i],"-n")==0)
+				if (strcmp(text[i],"-n")==0 || strcmp(text[i],"-En")==0 ||strcmp(text[i],"-nE")==0)
 				{
 					option=1;
 					break;
@@ -528,6 +528,15 @@ void add_in_history(char* str)
 	strcpy(temp,str);
 	history[last_pointer]=temp;
 	last_pointer+=1;
+	
+	if (last_pointer==100)
+	{
+		for(int i=0;i<100;i++)
+		{
+			history[i]=history[i+1];
+		}
+		last_pointer=99;
+	}
 }
 
 
@@ -584,7 +593,6 @@ void show_history(char** argruments,int word_count)
 					{
 						for(int i=atoi(argruments[2])-1;i<=last_pointer-1;i++)
 						{
-							printf("\n hi again\n");
 							history[i]=history[i+1];
 						}
 					}
