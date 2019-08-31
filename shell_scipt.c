@@ -22,6 +22,7 @@ void Command_handler(char**,int);
 int count_word(char*,char**);
 void in_echo(char**,int);
 void in_pwd(char**,int);
+void in_cd(char**,int);
 void ext_cat(char**,int);
 void ext_date(char**,int);
 void ext_ls(char**,int);
@@ -106,8 +107,7 @@ void Command_handler(char** user_input,int no_of_words)
 	}
 	else if(choice==2)
 	{
-		chdir(user_input[1]); 
-		show_directory();
+		in_cd(user_input,no_of_words); 
 	}
 	else if(choice==3)
 	{
@@ -144,7 +144,7 @@ void Command_handler(char** user_input,int no_of_words)
 	else
 	{
 		printf("\nThis command is out of scope of the shell or maybe an invalid command ");
-		printf("\n Don't worry you can try other command");
+		printf("\n Don't worry you can try other command\n");
 	}
 } 
 
@@ -221,23 +221,109 @@ void in_echo(char** text,int word_count)
     }
 }
 
-//this function for present directory 
+//this function is for present directory 
 void in_pwd(char** argruments,int word_count)
 {
-	char pwd[200];
+	pid_t process_id = fork();  
+  
+    if (process_id == -1) 
+	{ 
+        printf("\nError occured in forking child"); 
+        return; 
+    } 
+	
+	else if (process_id == 0) 
+	{       
+		char pwd[200];
 
-	if (word_count>2)printf("Error: pwd accepts only one argrument");
+		if (word_count>2)printf("Error: pwd accepts only one argrument");
 
-	else if (word_count>1)
+		else if (word_count>1)
+			{
+				if (strcmp(argruments[1],"-L")==0)printf("\nCurrent working logical directory (with symbolic link) -->>> %s \n",getcwd(pwd, sizeof(pwd)));
+				else if (strcmp(argruments[1],"-P")==0)
+				{
+					if (execvp(argruments[0],argruments)>0)
+					{ 
+						printf(" <<<<<<----Current working physical directory (without symbolic link) \n");
+					}
+					else
+					{
+						printf("\nError: Some unexpected error occured during execution of the command");
+					}				
+				}
+				else printf("\nError : incorrect option is enterterd\n");
+			}
+
+		else if(word_count==1)printf("\nYou are working in the -->>> %s directory \n",getcwd(pwd, sizeof(pwd)));
+
+		else printf("\nError: pwd accepts only one argrument\n");	
+		
+		exit(0);
+    } 
+	
+	else 
+	{ 
+        wait(NULL);  
+        return; 
+    } 
+}
+
+//this function is for cd command
+void in_cd(char** argruments,int word_count)
+{
+	pid_t process_id = fork();  
+  
+    if (process_id == -1) 
+	{ 
+        printf("\nError occured in forking child"); 
+        return; 
+    } 
+	
+	else if (process_id == 0) 
+	{       
+		if (word_count>2)
 		{
-			if (strcmp(argruments[1],"-L")==0)printf("\nYou are working in the -->>> %s logical directory\n",getcwd(pwd, sizeof(pwd)));
-			else if (strcmp(argruments[1],"-P")==0)printf("\nYou are working in the -->>> %s physical directory\n",getcwd(pwd, sizeof(pwd)));
-			else printf("\nError : incorrect option is enterterd\n");
+			if (strcmp(argruments[1],"-L")==0)
+			{
+				if(chdir(argruments[2])!=0)
+				{
+					printf("\nError: %s path or directory doesn't exist",argruments[2]);
+				}
+				else 
+				{
+					chdir(argruments[1]);
+					show_directory();
+				}
+			}
+			else if(strcmp(argruments[1],"-P")==0)
+			{
+				if (execvp(argruments[0],argruments)>0)
+				{
+					printf(" <<<<<<----Current working physical directory (without symbolic link) \n");
+					show_directory();
+				}
+				else printf("\nError: Some unexpected error occured during execution of the command\n");
+			}
+			else printf("\nError: Either option is invalid or not supported by the shell\n");
 		}
 
-	else if(word_count==1)printf("\nYou are working in the -->>> %s directory \n",getcwd(pwd, sizeof(pwd)));
+		else if(word_count>1)
+		{
+			if(chdir(argruments[1])!=0)printf("\nError: %s path or directory doesn't exist",argruments[1]);
+			else show_directory();
+		}
+		else printf("\nError: Enter path or directory\n");	
+		
+		exit(0);
+    } 
+	
+	else 
+	{ 
+        wait(NULL);  
+        return; 
+    } 
 
-	else printf("\nError: pwd accepts only one argrument\n");
 }
 
 //this function will work for cat command
@@ -341,6 +427,7 @@ void ext_ls(char** argruments,int word_count)
 		if (word_count>3)
 		{
 			printf("\nls accepts only 2 argeuments");
+			exit(0);
 		}
 		else if (word_count>2)
 		{
@@ -468,46 +555,89 @@ void add_in_history(char* str)
 
 void show_history(char** argruments,int word_count)
 {
-	if (word_count==1)
-	{
-		for (int i=0;i<last_pointer;i++)
+	pid_t process_id = fork();  
+  
+    if (process_id == -1) 
+	{ 
+        printf("\nError occured in forking child"); 
+        return; 
+    } 
+	
+	else if (process_id == 0) 
+	{       
+		//for printing 
+		if (word_count==1)
 		{
-			printf("\n%i %s\n",i+1,history[i]);
-		}
-	}
-	else if (word_count==2)
-	{
-		if (strcmp(argruments[1],"-c")==0)
-		{
-			last_pointer=0;
-			printf("\nHistory cleared\n");
-		}
-		else printf("\nError: Enter a valid option for history\n");
-	}
-
-	else if(word_count==3)
-	{
-		if(strcmp(argruments[1],"-d")==0 && isdigit(argruments[2]))
-		{
-			if (atoi(argruments[2])<=last_pointer+1 && atoi(argruments[2])>1)
+			for (int i=0;i<last_pointer;i++)
 			{
-				printf("\nHistory at %s delected\n",argruments[2]);
-				for(int i=atoi(argruments[2]);i<last_pointer-1;i++)
-				{
-					history[i]=history[i+1];
-				}
+				printf("\n%i %s",i+1,history[i]);
 			}
-			else printf("\nError: Enter valid number\n");
+			printf("\n");
+			exit(0);
 		}
-		else printf("\nError: Enter a valid options for history\n");
-	}
-	else
-	{
-		printf("\nError: History only accepts one argrument or option\n");
-	}
+
+		// if -c option is present in the command
+		else if (word_count==2)
+		{
+			if (strcmp(argruments[1],"-c")==0)
+			{
+				last_pointer=0;
+				printf("\nHistory cleared\n");
+			}
+			else printf("\nError: Enter a valid option for history\n");
+			exit(0);
+		}
+
+		//if -d option is given
+		else if(word_count==3)
+		{
+			if(strcmp(argruments[1],"-d")==0)
+			{
+				if (atoi(argruments[2])<=last_pointer+1 && atoi(argruments[2])>=1)
+				{
+					printf("\nHistory at %s delected\n",argruments[2]);			
+
+					if ((atoi(argruments[2])-1)==last_pointer)
+					{
+						last_pointer-=1;
+					}
+
+					else 
+					{
+						/*for(int i=atoi(argruments[2])-1;i<=last_pointer-1;i++)
+						{
+							printf("\n hi again\n");
+							history[i]=history[i+1];
+						}*/
+						printf("\n hi again %s",argruments[2]);
+						char* tempe="";
+						history[atoi(argruments[2])]=tempe;
+					}
+
+				}
+				else printf("\nError: Enter valid number\n");
+			}
+			else printf("\nError: Enter a valid options for history\n");
+
+			exit(0);
+		}
+
+		//error handling
+		else 
+		{
+			printf("\nError: History only accepts one argrument or option\n");	
+			exit(0);
+		}
+    } 
+	
+	else 
+	{ 
+        wait(NULL);  
+        return; 
+    } 
 }
 
-
+//main function which will run until user command to exit
 int main() 
 { 
 	char input_string[100],*processed_string[100]; 
